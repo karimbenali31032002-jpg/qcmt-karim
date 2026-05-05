@@ -1,0 +1,6 @@
+{
+  "name": "Remix: MedStratify",
+  "description": "Une application intelligente pour la stratification et la révision des QCM du résidanat médicaux, permettant de classer l\u0027importance des questions par cours.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

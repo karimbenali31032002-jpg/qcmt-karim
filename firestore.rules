@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'karimbenali31032002@gmail.com';
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Entity Validations
+    function isValidCourse(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && (!('description' in data) || (data.description is string && data.description.size() <= 1000))
+        && (!('qcmCount' in data) || (data.qcmCount is number))
+        && (!('attachments' in data) || (data.attachments is list && data.attachments.size() <= 20));
+    }
+
+    function isValidQCM(data) {
+      return data.question is string && data.question.size() > 0 && data.question.size() <= 1000
+        && data.options is list && data.options.size() >= 2 && data.options.size() <= 10
+        && data.answerIndices is list && data.answerIndices.size() >= 1
+        && (!('courseId' in data) || (data.courseId == null || isValidId(data.courseId)))
+        && (!('context' in data) || (data.context is string && data.context.size() <= 5000));
+    }
+
+    function isValidRating(data) {
+      return data.userId == request.auth.uid
+        && data.qcmId is string && isValidId(data.qcmId)
+        && data.rating in [1, 2, 3];
+    }
+
+    // Collections
+    match /courses/{courseId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && isValidCourse(incoming());
+      allow update: if (isAdmin() || isSignedIn()) && isValidCourse(incoming()); // Allow users to update counts
+      allow delete: if isAdmin();
+    }
+
+    match /qcms/{qcmId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && isValidQCM(incoming());
+      allow update: if isAdmin() && isValidQCM(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /userRatings/{ratingId} {
+      allow create: if isSignedIn() && isValidRating(incoming());
+      allow update: if isOwner(resource.data.userId) && isValidRating(incoming()) 
+        && incoming().userId == resource.data.userId;
+      allow delete: if isOwner(resource.data.userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isOwner(resource.data.userId);
+    }
+  }
+}

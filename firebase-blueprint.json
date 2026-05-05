@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "QCM": {
+      "title": "QCM",
+      "description": "A Multiple Choice Question for a specific course.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "context": { "type": "string" },
+        "question": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "answerIndices": {
+          "type": "array",
+          "items": { "type": "number" }
+        },
+        "explanation": { "type": "string" },
+        "defaultRating": { "type": "number" },
+        "sourcePdfUrl": { "type": "string" },
+        "sourcePdfName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["courseId", "question", "options", "answerIndices"]
+    },
+    "Attachment": {
+      "title": "Attachment",
+      "description": "A PDF or file attached to a course.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Course": {
+      "title": "Course",
+      "description": "A medical course involving multiple QCMs.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "qcmCount": { "type": "number" },
+        "attachments": {
+          "type": "array",
+          "items": { "$ref": "#/entities/Attachment" }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title"]
+    },
+    "UserRating": {
+      "title": "UserRating",
+      "description": "A rating given by a user to a specific QCM.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "qcmId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "rating": { "type": "number", "enum": [1, 2, 3] },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "qcmId", "rating"]
+    }
+  },
+  "firestore": {
+    "/courses/{courseId}": {
+      "schema": "Course",
+      "description": "Collection of courses."
+    },
+    "/qcms/{qcmId}": {
+      "schema": "QCM",
+      "description": "Collection of all QCMs."
+    },
+    "/userRatings/{ratingId}": {
+      "schema": "UserRating",
+      "description": "User ratings for QCMs."
+    }
+  }
+}
