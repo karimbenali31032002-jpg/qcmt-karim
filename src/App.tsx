@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { auth, signInWithGoogle } from '@/src/lib/firebase';
+import { auth, signInWithGoogle, checkIsAdmin, isFirebaseConfigured } from '@/src/lib/firebase';
 import { ViewState, Course, QCM } from '@/src/types';
 import { Layout } from '@/src/components/Layout';
 import { Dashboard } from '@/src/components/Dashboard';
@@ -19,11 +19,13 @@ import { ImportView } from '@/src/components/ImportView';
 import { StatsView } from '@/src/components/StatsView';
 import { Toaster } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, BookOpen } from 'lucide-react';
+import { PlusCircle, BookOpen, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewState>('dashboard');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -31,12 +33,37 @@ export default function App() {
   const [importCourseId, setImportCourseId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isFirebaseConfigured || !auth) {
+      setLoading(false);
+      return;
+    }
     const unsubscribe = auth.onAuthStateChanged((u: any) => {
       setUser(u);
+      setIsAdmin(checkIsAdmin(u));
       setLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error: any) {
+      if (error.code === 'auth/popup-blocked') {
+        toast.error("Le pop-up de connexion a été bloqué par votre navigateur.", {
+          description: "Veuillez autoriser les pop-ups pour medstratify.run.app"
+        });
+      } else if (error.code === 'auth/unauthorized-domain') {
+        toast.error("Domaine non autorisé dans la console Firebase.", {
+          description: "Veuillez ajouter ce domaine aux Domaines Autorisés de l'Authentification Firebase."
+        });
+      } else {
+        toast.error("Erreur de connexion", {
+          description: error.message || "Une erreur inconnue est survenue."
+        });
+      }
+    }
+  };
 
   const handleImportComplete = (qcms?: QCM[]) => {
     if (qcms && qcms.length > 0) {
@@ -47,6 +74,42 @@ export default function App() {
       setView('dashboard');
     }
   };
+
+  if (!isFirebaseConfigured) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0A0A0A] p-6 font-sans text-white">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-xl w-full bg-[#0F0F0F] p-10 rounded-[3rem] border border-red-500/20 shadow-2xl text-center"
+        >
+          <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-red-500/20">
+            <AlertTriangle className="w-10 h-10 text-red-500" />
+          </div>
+          
+          <h1 className="text-3xl font-serif italic text-white mb-4">Configuration Requise</h1>
+          <p className="text-white/50 text-sm mb-8 leading-relaxed">
+            L'initialisation de Firebase a échoué. Si vous utilisez ce projet en local, vous devez configurer vos propres clés API Firebase.
+          </p>
+
+          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 text-left space-y-4 mb-8">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-amber-500/70">Marche à suivre :</p>
+            <ol className="text-xs text-white/40 space-y-3 list-decimal pl-4 leading-relaxed">
+              <li>Créez un projet sur la <a href="https://console.firebase.google.com/" target="_blank" className="text-amber-500 hover:underline">Console Firebase</a>.</li>
+              <li>Activez l'Authentification (Google) et Firestore Database.</li>
+              <li>Copiez votre configuration Web (apiKey, projectId, etc.).</li>
+              <li>Mettez à jour le fichier <code className="bg-white/5 px-2 py-0.5 rounded text-white/70">firebase-applet-config.json</code> à la racine du projet.</li>
+              <li>Relancez le projet avec <code className="bg-white/5 px-2 py-0.5 rounded text-white/70">npm run dev</code>.</li>
+            </ol>
+          </div>
+
+          <p className="text-[9px] text-white/20 uppercase tracking-widest font-bold">
+            MedStratify Engineering Team
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -84,7 +147,7 @@ export default function App() {
           </p>
 
           <Button 
-            onClick={signInWithGoogle}
+            onClick={handleSignIn}
             className="w-full bg-amber-600 hover:bg-amber-500 text-black h-14 text-lg font-bold rounded-2xl transition-all shadow-xl shadow-amber-600/10 active:scale-[0.98] flex items-center justify-center gap-3"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -95,6 +158,13 @@ export default function App() {
             </svg>
             Accéder à l'Espace Candidat
           </Button>
+
+          <div className="mt-8 p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 flex items-start gap-3 text-left">
+            <AlertTriangle className="w-4 h-4 text-amber-500/60 mt-0.5 shrink-0" />
+            <p className="text-[10px] text-white/40 leading-relaxed uppercase tracking-wider font-bold">
+              Si la fenêtre de connexion ne s'ouvre pas, vérifiez que votre navigateur n'a pas bloqué le pop-up.
+            </p>
+          </div>
 
           <p className="mt-8 text-[9px] text-white/20 uppercase tracking-widest font-bold">
             Protection des données de révision sécurisée

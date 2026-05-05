@@ -4,10 +4,22 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '@/firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const storage = getStorage(app);
+// Log a warning if config seems invalid (empty apiKey is a common sign of missing config)
+if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "REPLACE_WITH_YOUR_API_KEY") {
+  console.warn("⚠️ Firebase Configuration is incomplete. Please check your firebase-applet-config.json file.");
+}
+
+let app;
+try {
+  app = initializeApp(firebaseConfig);
+} catch (error) {
+  console.error("❌ Failed to initialize Firebase:", error);
+}
+
+export const isFirebaseConfigured = !!app;
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app, firebaseConfig.firestoreDatabaseId) : null;
+export const storage = app ? getStorage(app) : null;
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -29,6 +41,10 @@ export const signOut = async () => {
     console.error("Error signing out:", error);
     throw error;
   }
+};
+
+export const checkIsAdmin = (user: any) => {
+  return user?.email === 'karimbenali31032002@gmail.com';
 };
 
 export enum OperationType {
