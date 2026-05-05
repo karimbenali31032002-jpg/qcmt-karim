@@ -23,6 +23,7 @@ import { auth } from '@/src/lib/firebase';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { generateStratificationPDF } from '@/src/lib/pdfService';
 
 interface CourseViewProps {
   course: Course;
@@ -131,6 +132,20 @@ export function CourseView({ course, onStartSession, onBack, onImportQcm }: Cour
     }
   };
 
+  const handleDownloadPDF = async () => {
+    try {
+      if (filteredQcms.length === 0) {
+        toast.error("Aucun QCM à exporter avec le filtre actuel");
+        return;
+      }
+      await generateStratificationPDF(currentCourse.title, filter, filteredQcms, ratings);
+      toast.success("PDF généré avec succès");
+    } catch (e) {
+      toast.error("Erreur lors de la génération du PDF");
+      console.error(e);
+    }
+  };
+
   const ratedCount = Object.keys(ratings).length;
   const progress = qcms.length > 0 ? (ratedCount / qcms.length) * 100 : 0;
 
@@ -170,6 +185,13 @@ export function CourseView({ course, onStartSession, onBack, onImportQcm }: Cour
           >
             <FilePlus className="w-4 h-4" />
             Ajouter QCM (PDF)
+          </Button>
+          <Button 
+            onClick={handleDownloadPDF}
+            className="bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 rounded-full h-12 px-6 gap-2 text-xs font-bold uppercase tracking-widest"
+          >
+            <Download className="w-4 h-4" />
+            Exporter
           </Button>
           <Button 
             variant="outline" 

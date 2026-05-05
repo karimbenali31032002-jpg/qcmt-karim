@@ -36,39 +36,27 @@ export default function App() {
   const [configured, setConfigured] = useState(false);
 
   useEffect(() => {
-    if (isFirebaseConfigured && auth) {
-      setConfigured(true);
-      const unsubscribe = auth.onAuthStateChanged((u: any) => {
-        setUser(u);
-        setIsAdmin(checkIsAdmin(u));
-        setLoading(false);
-        setIsInitializing(false);
-      });
-      return () => unsubscribe();
-    } else {
-      setConfigured(false);
-      setIsInitializing(false);
+    // Local storage version always "configured"
+    setConfigured(true);
+    
+    // Check for existing user
+    const unsubscribe = auth.onAuthStateChanged((u: any) => {
+      setUser(u);
+      setIsAdmin(checkIsAdmin(u));
       setLoading(false);
-    }
+      setIsInitializing(false);
+    });
+    
+    return () => unsubscribe();
   }, []);
 
   const handleSignIn = async () => {
     try {
       await signInWithGoogle();
     } catch (error: any) {
-      if (error.code === 'auth/popup-blocked') {
-        toast.error("Le pop-up de connexion a été bloqué par votre navigateur.", {
-          description: "Veuillez autoriser les pop-ups pour medstratify.run.app"
-        });
-      } else if (error.code === 'auth/unauthorized-domain') {
-        toast.error("Domaine non autorisé dans la console Firebase.", {
-          description: "Veuillez ajouter ce domaine aux Domaines Autorisés de l'Authentification Firebase."
-        });
-      } else {
-        toast.error("Erreur de connexion", {
-          description: error.message || "Une erreur inconnue est survenue."
-        });
-      }
+      toast.error("Erreur de connexion local", {
+        description: error.message || "Une erreur inconnue est survenue."
+      });
     }
   };
 
@@ -93,81 +81,6 @@ export default function App() {
     );
   }
 
-  if (!configured) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0A0A0A] p-6 font-sans text-white">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-2xl w-full bg-[#0F0F0F] p-8 md:p-12 rounded-[2.5rem] border border-amber-500/20 shadow-2xl"
-        >
-          <div className="flex flex-col md:flex-row gap-8 items-start">
-            <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center shrink-0 border border-amber-500/20">
-              <AlertTriangle className="w-8 h-8 text-amber-500" />
-            </div>
-            
-            <div className="flex-1">
-              <h1 className="text-3xl font-serif italic text-white mb-4">Configuration Firebase Nécessaire</h1>
-              <p className="text-white/60 text-sm mb-8 leading-relaxed">
-                Pour utiliser MedStratify en local ou sur votre propre domaine, vous devez lier votre propre projet Firebase. C'est gratuit et prend 5 minutes.
-              </p>
-
-              <div className="space-y-6">
-                <section>
-                  <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold text-amber-500 mb-4 px-1">1. Console Firebase</h2>
-                  <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 space-y-3">
-                    <p className="text-xs text-white/50 leading-relaxed">
-                      Allez sur la <a href="https://console.firebase.google.com/" target="_blank" className="text-amber-500 hover:underline font-bold">Console Firebase</a> et cliquez sur <b>"Ajouter un projet"</b>.
-                    </p>
-                  </div>
-                </section>
-
-                <section>
-                  <h2 className="text-[11px] uppercase tracking-[0.2em] font-bold text-amber-500 mb-4 px-1">2. Paramètres du Projet</h2>
-                  <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 space-y-3">
-                    <p className="text-xs text-white/50 leading-relaxed">
-                      Allez dans "Paramètres du projet" &gt; "Général", descendez jusqu'à "Vos applications" et créez une App Web (icône &lt;/&gt;).
-                    </p>
-                  </div>
-                </section>
-
-                <section>
-                  <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold text-amber-500 mb-4 px-1">3. Copier la Config</h2>
-                  <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 space-y-3">
-                    <p className="text-xs text-white/50 leading-relaxed">
-                      Copiez l'objet <code className="text-amber-200/70">firebaseConfig</code> qui s'affiche.
-                    </p>
-                  </div>
-                </section>
-
-                <section>
-                  <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold text-amber-500 mb-4 px-1">4. Coller dans ce projet</h2>
-                  <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 space-y-3">
-                    <p className="text-xs text-white/50 leading-relaxed">
-                      Ouvrez le fichier <code className="bg-white/5 px-2 py-0.5 rounded text-white/80">firebase-applet-config.json</code> ici et remplacez les valeurs par les vôtres.
-                    </p>
-                  </div>
-                </section>
-              </div>
-
-              <div className="mt-12 flex items-center justify-between border-t border-white/5 pt-8">
-                <p className="text-[9px] text-white/20 uppercase tracking-widest font-bold">
-                  MedStratify Setup Guide
-                </p>
-                <Button 
-                  onClick={() => window.location.reload()}
-                  variant="ghost" 
-                  className="text-xs text-white/40 hover:text-white"
-                >
-                  J'ai fait les changements, rafraîchir
-                </Button>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0A0A0A]">

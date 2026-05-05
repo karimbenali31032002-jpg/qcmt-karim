@@ -13,12 +13,15 @@ import {
   Flag,
   ArrowRight,
   FileText,
-  Trash2
+  Trash2,
+  Download,
+  Trophy
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { generateStratificationPDF } from '@/src/lib/pdfService';
 
 interface SessionViewProps {
   course?: Course | null;
@@ -33,6 +36,7 @@ export function SessionView({ course, initialQcms, onFinish }: SessionViewProps)
   const [showAnswer, setShowAnswer] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [loading, setLoading] = useState(!initialQcms);
+  const [sessionFinished, setSessionFinished] = useState(false);
 
   useEffect(() => {
     const fetchSessionData = async () => {
@@ -90,15 +94,80 @@ export function SessionView({ course, initialQcms, onFinish }: SessionViewProps)
           setSelectedIndices([]);
         }, 300);
       } else {
-        toast.success("Session terminée ! Tous les QCM ont été stratifiés.");
-        onFinish();
+        setSessionFinished(true);
       }
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, 'userRatings');
     }
   };
 
+  const handleDownloadPDF = async () => {
+    try {
+      const courseTitle = course?.title || "Session Médicale";
+      await generateStratificationPDF(courseTitle, 'session', qcms, ratings);
+      toast.success("PDF généré avec succès");
+    } catch (e) {
+      toast.error("Erreur lors de la génération du PDF");
+      console.error(e);
+    }
+  };
+
   if (loading) return null;
+
+  if (sessionFinished) {
+    return (
+      <div className="max-w-4xl mx-auto py-20 px-6">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-[#0F0F0F] border border-white/5 rounded-[3rem] p-12 text-center shadow-2xl relative overflow-hidden"
+        >
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-amber-500/10 blur-[100px] -z-10" />
+          
+          <div className="w-20 h-20 bg-amber-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-amber-500/20">
+            <Trophy className="w-10 h-10 text-amber-500" />
+          </div>
+
+          <h1 className="text-4xl font-serif italic text-white mb-4">Session Stratifiée</h1>
+          <p className="text-white/40 text-lg max-w-md mx-auto mb-12">
+            Bravo ! Vous avez terminé la stratification de {qcms.length} QCM. Vos priorités de révision sont mémorisées.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button 
+              onClick={handleDownloadPDF}
+              className="bg-amber-500 hover:bg-amber-400 text-black px-10 h-14 rounded-full font-bold shadow-xl shadow-amber-500/20 flex items-center gap-2 group w-full sm:w-auto"
+            >
+              <Download className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
+              Télécharger le PDF
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={onFinish}
+              className="border-white/10 hover:bg-white/5 text-white px-10 h-14 rounded-full font-bold w-full sm:w-auto"
+            >
+              Retour au Module
+            </Button>
+          </div>
+
+          <div className="mt-16 grid grid-cols-3 gap-8 pt-12 border-t border-white/5">
+            {[1, 2, 3].map(r => {
+              const count = Object.values(ratings).filter(v => v === r).length;
+              return (
+                <div key={r} className="space-y-1">
+                  <div className="text-2xl font-mono font-bold text-white/90">{count}</div>
+                  <div className={cn(
+                    "text-[10px] uppercase tracking-widest font-bold",
+                    r === 1 ? "text-blue-500" : r === 2 ? "text-amber-500" : "text-red-500"
+                  )}>Rang {r}</div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (qcms.length === 0) {
     return (
@@ -191,6 +260,16 @@ export function SessionView({ course, initialQcms, onFinish }: SessionViewProps)
               )}
             >
               Cas
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleDownloadPDF}
+              className="text-amber-500/60 hover:text-amber-500 hover:bg-amber-500/5 text-[10px] font-bold uppercase tracking-widest px-3 rounded-full h-8 gap-2"
+              title="Télécharger le PDF de la session"
+            >
+              <Download className="w-3.5 h-3.5" />
+              PDF
             </Button>
             <Button 
               variant="ghost" 

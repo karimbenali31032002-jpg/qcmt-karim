@@ -10,11 +10,14 @@ import {
   ChevronRight, 
   BookOpen,
   ArrowRight,
-  History
+  History,
+  Download
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { generateStratificationPDF } from '@/src/lib/pdfService';
 
 export function StatsView() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -54,6 +57,59 @@ export function StatsView() {
     const ratingMatch = selectedRating === 'all' || r.rating.toString() === selectedRating;
     return courseMatch && ratingMatch;
   });
+
+  const handleDownloadPDF = async () => {
+    const course = courses.find(c => c.id === selectedCourseId);
+    const courseTitle = course ? course.title : "Tous les modules";
+    
+    // Get the actual QCM objects for the filtered ratings
+    // We also want to include ALL clinical cases regardless of rating if course matches
+    // But the user said "qcms d'une session apres stratification" 
+    // They also said: "si c le qcm fait partie dun cas clinique l'exporte toujours"
+    
+    // Let's get the list of QCMs to export
+    const exportQcms: QCM[] = [];
+    const exportRatingsMap: Record<string, number> = {};
+    
+    // First, all QCMs for the selected course (to find all cases)
+    const allCourseQcms = selectedCourseId === 'all' 
+      ? Object.values(qcms) 
+      : Object.values(qcms).filter(q => q.courseId === selectedCourseId);
+      
+    // Map existing ratings for lookup
+    const currentRatingsMap: Record<string, number> = {};
+    ratings.forEach(r => currentRatingsMap[r.qcmId] = r.rating);
+
+    allCourseQcms.forEach(q => {
+      const rating = currentRatingsMap[q.id];
+      const isClinicalCase = !!q.context;
+      const matchesFilter = selectedRating === 'all' || (rating && rating.toString() === selectedRating);
+      
+      // Export if it matches filter OR (if it's a clinical case AND course matches)
+      // Note: if selectedCourseId is 'all', all clinical cases in database will be exported if we are not careful
+      // The user wants "session apres stratification", so we focus on what's visible but include companion cases
+      if (matchesFilter || (isClinicalCase && (selectedCourseId === 'all' || q.courseId === selectedCourseId))) {
+        // Avoid duplicates
+        if (!exportQcms.find(ex => ex.id === q.id)) {
+          exportQcms.push(q);
+          exportRatingsMap[q.id] = rating || 0; // 0 if unrated clinical case included
+        }
+      }
+    });
+
+    if (exportQcms.length === 0) {
+      toast.error("Aucun QCM à exporter");
+      return;
+    }
+
+    try {
+      await generateStratificationPDF(courseTitle, selectedRating, exportQcms, exportRatingsMap);
+      toast.success("PDF généré avec succès");
+    } catch (e) {
+      toast.error("Erreur lors de la génération du PDF");
+      console.error(e);
+    }
+  };
 
   return (
     <div className="space-y-12 py-10">
@@ -111,6 +167,13 @@ export function StatsView() {
           <Badge variant="outline" className="ml-auto rounded-full border-amber-500/10 text-amber-500/30 text-[9px] uppercase tracking-widest font-mono px-4 h-12 flex items-center">
             {filteredRatings.length} QCM Filtrés
           </Badge>
+          <Button 
+            onClick={handleDownloadPDF}
+            className="rounded-full bg-amber-500 hover:bg-amber-400 text-black h-12 px-6 font-bold flex items-center gap-2 shadow-xl shadow-amber-500/10"
+          >
+            <Download className="w-4 h-4" />
+            Exporter PDF
+          </Button>
         </div>
         <CardContent className="p-0">
           <ScrollArea className="h-[600px]">
