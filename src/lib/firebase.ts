@@ -1,45 +1,28 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 let app: any = null;
-let firebaseConfig: any = null;
+const isConfigValid = firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY";
 
-// Initialization promise
-export const firebaseInitPromise = (async () => {
-  try {
-    firebaseConfig = await import('../../firebase-applet-config.json').then(m => m.default);
-    if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY") {
+try {
+  if (isConfigValid) {
+    if (!getApps().length) {
       app = initializeApp(firebaseConfig);
-      return true;
+    } else {
+      app = getApp();
     }
-  } catch (e) {
-    console.error("Firebase init failed:", e);
   }
-  return false;
-})();
+} catch (error) {
+  console.error("❌ Failed to initialize Firebase:", error);
+}
 
-export const getFirebaseApp = () => app;
-export const getIsConfigured = () => !!app;
-export const getAuthInstance = () => app ? getAuth(app) : null;
-export const getDb = () => app ? getFirestore(app, firebaseConfig?.firestoreDatabaseId || "(default)") : null;
-export const getStorageInstance = () => app ? getStorage(app) : null;
-
-// Keep exports for backward compatibility but they might be null initially
-export let isFirebaseConfigured = false;
-export let auth: any = null;
-export let db: any = null;
-export let storage: any = null;
-
-firebaseInitPromise.then(configured => {
-  isFirebaseConfigured = configured;
-  if (configured) {
-    auth = getAuth(app);
-    db = getFirestore(app, firebaseConfig?.firestoreDatabaseId || "(default)");
-    storage = getStorage(app);
-  }
-});
+export const isFirebaseConfigured = !!app;
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app, firebaseConfig?.firestoreDatabaseId || "(default)") : null;
+export const storage = app ? getStorage(app) : null;
 
 const googleProvider = new GoogleAuthProvider();
 

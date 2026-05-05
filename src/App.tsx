@@ -36,27 +36,20 @@ export default function App() {
   const [configured, setConfigured] = useState(false);
 
   useEffect(() => {
-    import('@/src/lib/firebase').then((mod) => {
-      mod.firebaseInitPromise.then((isConfigured: boolean) => {
-        setConfigured(isConfigured);
+    if (isFirebaseConfigured && auth) {
+      setConfigured(true);
+      const unsubscribe = auth.onAuthStateChanged((u: any) => {
+        setUser(u);
+        setIsAdmin(checkIsAdmin(u));
+        setLoading(false);
         setIsInitializing(false);
-        
-        if (isConfigured && mod.auth) {
-          const unsubscribe = mod.auth.onAuthStateChanged((u: any) => {
-            setUser(u);
-            setIsAdmin(mod.checkIsAdmin(u));
-            setLoading(false);
-          });
-          return unsubscribe;
-        } else {
-          setLoading(false);
-        }
       });
-    }).catch(err => {
-      console.error("Critical boot error:", err);
+      return () => unsubscribe();
+    } else {
+      setConfigured(false);
       setIsInitializing(false);
       setLoading(false);
-    });
+    }
   }, []);
 
   const handleSignIn = async () => {
