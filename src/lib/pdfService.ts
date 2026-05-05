@@ -135,9 +135,11 @@ export async function generateStratificationPDF(
 
   // Filename formatting
   const safeTitle = courseTitle.replace(/[^a-z0-9]/gi, '_');
-  let safeRating = rating;
-  if (rating === 'all') safeRating = 'complet';
-  if (rating === 'session') safeRating = 'session';
+  let ratingDisplay = rating;
   
-  doc.save(`${safeTitle}_rang_${safeRating}.pdf`);
+  if (rating === 'all') ratingDisplay = 'complet';
+  else if (rating === 'session') ratingDisplay = 'session';
+  
+  // Format final: Nom_Cours_1.pdf ou Nom_Cours_session.pdf
+  doc.save(`${safeTitle}_${ratingDisplay}.pdf`);
 }
