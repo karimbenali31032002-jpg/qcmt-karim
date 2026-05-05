@@ -79,33 +79,73 @@ export default function App() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0A0A0A] p-6 font-sans text-white">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-xl w-full bg-[#0F0F0F] p-10 rounded-[3rem] border border-red-500/20 shadow-2xl text-center"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-2xl w-full bg-[#0F0F0F] p-8 md:p-12 rounded-[2.5rem] border border-amber-500/20 shadow-2xl"
         >
-          <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-red-500/20">
-            <AlertTriangle className="w-10 h-10 text-red-500" />
-          </div>
-          
-          <h1 className="text-3xl font-serif italic text-white mb-4">Configuration Requise</h1>
-          <p className="text-white/50 text-sm mb-8 leading-relaxed">
-            L'initialisation de Firebase a échoué. Si vous utilisez ce projet en local, vous devez configurer vos propres clés API Firebase.
-          </p>
+          <div className="flex flex-col md:flex-row gap-8 items-start">
+            <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center shrink-0 border border-amber-500/20">
+              <AlertTriangle className="w-8 h-8 text-amber-500" />
+            </div>
+            
+            <div className="flex-1">
+              <h1 className="text-3xl font-serif italic text-white mb-4">Configuration Firebase Nécessaire</h1>
+              <p className="text-white/60 text-sm mb-8 leading-relaxed">
+                Pour utiliser MedStratify en local ou sur votre propre domaine, vous devez lier votre propre projet Firebase. C'est gratuit et prend 5 minutes.
+              </p>
 
-          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 text-left space-y-4 mb-8">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-amber-500/70">Marche à suivre :</p>
-            <ol className="text-xs text-white/40 space-y-3 list-decimal pl-4 leading-relaxed">
-              <li>Créez un projet sur la <a href="https://console.firebase.google.com/" target="_blank" className="text-amber-500 hover:underline">Console Firebase</a>.</li>
-              <li>Activez l'Authentification (Google) et Firestore Database.</li>
-              <li>Copiez votre configuration Web (apiKey, projectId, etc.).</li>
-              <li>Mettez à jour le fichier <code className="bg-white/5 px-2 py-0.5 rounded text-white/70">firebase-applet-config.json</code> à la racine du projet.</li>
-              <li>Relancez le projet avec <code className="bg-white/5 px-2 py-0.5 rounded text-white/70">npm run dev</code>.</li>
-            </ol>
-          </div>
+              <div className="space-y-6">
+                <section>
+                  <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold text-amber-500 mb-4 px-1">1. Console Firebase</h2>
+                  <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 space-y-3">
+                    <p className="text-xs text-white/50 leading-relaxed">
+                      Allez sur la <a href="https://console.firebase.google.com/" target="_blank" className="text-amber-500 hover:underline font-bold">Console Firebase</a> et cliquez sur <b>"Ajouter un projet"</b>.
+                    </p>
+                  </div>
+                </section>
 
-          <p className="text-[9px] text-white/20 uppercase tracking-widest font-bold">
-            MedStratify Engineering Team
-          </p>
+                <section>
+                  <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold text-amber-500 mb-4 px-1">2. Créer une App Web</h2>
+                  <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 space-y-3">
+                    <p className="text-xs text-white/50 leading-relaxed">
+                      Dans votre projet, cliquez sur l'icône <b>Code (&lt;/&gt;)</b> pour ajouter une application Web. Donnez lui un nom et cliquez sur "Enregistrer".
+                    </p>
+                  </div>
+                </section>
+
+                <section>
+                  <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold text-amber-500 mb-4 px-1">3. Copier la Config</h2>
+                  <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 space-y-3">
+                    <p className="text-xs text-white/50 leading-relaxed">
+                      Copiez l'objet <code className="text-amber-200/70">firebaseConfig</code> qui s'affiche.
+                    </p>
+                  </div>
+                </section>
+
+                <section>
+                  <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold text-amber-500 mb-4 px-1">4. Coller dans ce projet</h2>
+                  <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 space-y-3">
+                    <p className="text-xs text-white/50 leading-relaxed">
+                      Ouvrez le fichier <code className="bg-white/5 px-2 py-0.5 rounded text-white/80">firebase-applet-config.json</code> ici et remplacez les valeurs par les vôtres.
+                    </p>
+                  </div>
+                </section>
+              </div>
+
+              <div className="mt-12 flex items-center justify-between border-t border-white/5 pt-8">
+                <p className="text-[9px] text-white/20 uppercase tracking-widest font-bold">
+                  MedStratify Setup Guide
+                </p>
+                <Button 
+                  onClick={() => window.location.reload()}
+                  variant="ghost" 
+                  className="text-xs text-white/40 hover:text-white"
+                >
+                  J'ai fait les changements, rafraîchir
+                </Button>
+              </div>
+            </div>
+          </div>
         </motion.div>
       </div>
     );

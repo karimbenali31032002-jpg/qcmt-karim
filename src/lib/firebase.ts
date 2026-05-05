@@ -11,19 +11,26 @@ if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "REPL
 
 let app;
 try {
-  app = initializeApp(firebaseConfig);
+  if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY") {
+    app = initializeApp(firebaseConfig);
+  } else {
+    console.warn("⚠️ Firebase configuration is missing or incomplete.");
+  }
 } catch (error) {
   console.error("❌ Failed to initialize Firebase:", error);
 }
 
 export const isFirebaseConfigured = !!app;
 export const auth = app ? getAuth(app) : null;
-export const db = app ? getFirestore(app, firebaseConfig.firestoreDatabaseId) : null;
+
+// Ensure db and storage don't crash if app exists but config is weird
+export const db = app ? getFirestore(app, firebaseConfig?.firestoreDatabaseId || "(default)") : null;
 export const storage = app ? getStorage(app) : null;
 
 const googleProvider = new GoogleAuthProvider();
 
 export const signInWithGoogle = async () => {
+  if (!auth) throw new Error("Firebase Auth is not initialized. Check your configuration.");
   try {
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
@@ -34,6 +41,7 @@ export const signInWithGoogle = async () => {
 };
 
 export const signOut = async () => {
+  if (!auth) return;
   try {
     await firebaseSignOut(auth);
     window.location.reload();

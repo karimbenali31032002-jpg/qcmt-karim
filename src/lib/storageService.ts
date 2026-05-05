@@ -30,12 +30,14 @@ const COLLECTIONS = {
 
 class StorageService {
   private isAdmin(): boolean {
+    if (!auth) return false;
     // Only the primary developer can edit global content for now
     return auth.currentUser?.email === 'karimbenali31032002@gmail.com';
   }
 
   // Files/Uploads (Migrated to Firebase Storage)
   async uploadFile(file: File): Promise<string> {
+    if (!storage) throw new Error("Storage not initialized");
     const fileId = `uploads/${Date.now()}_${file.name}`;
     const storageRef = ref(storage, fileId);
     
@@ -50,7 +52,7 @@ class StorageService {
   }
 
   async deleteFile(url: string): Promise<void> {
-    if (!url || !url.includes('firebasestorage')) return;
+    if (!url || !url.includes('firebasestorage') || !storage) return;
     try {
       const storageRef = ref(storage, url);
       await deleteObject(storageRef);
@@ -61,6 +63,7 @@ class StorageService {
 
   // Courses
   async getCourses(): Promise<Course[]> {
+    if (!db) return [];
     const path = COLLECTIONS.COURSES;
     try {
       const q = query(collection(db, path), orderBy('title', 'asc'));
@@ -80,6 +83,7 @@ class StorageService {
   }
 
   async getCourse(id: string): Promise<Course | undefined> {
+    if (!db) return undefined;
     const path = `${COLLECTIONS.COURSES}/${id}`;
     try {
       const docSnap = await getDoc(doc(db, COLLECTIONS.COURSES, id));
@@ -93,6 +97,7 @@ class StorageService {
   }
 
   async addCourse(course: Omit<Course, 'id' | 'createdAt'>): Promise<Course> {
+    if (!db) throw new Error("Database not initialized");
     const path = COLLECTIONS.COURSES;
     try {
       const newCourseData = {
@@ -109,6 +114,7 @@ class StorageService {
   }
 
   async updateCourse(id: string, updates: Partial<Course>): Promise<Course> {
+    if (!db) throw new Error("Database not initialized");
     const path = `${COLLECTIONS.COURSES}/${id}`;
     try {
       const docRef = doc(db, COLLECTIONS.COURSES, id);
@@ -125,7 +131,7 @@ class StorageService {
   }
 
   async deleteCourse(id: string): Promise<void> {
-    if (!id) return;
+    if (!id || !db) return;
     const path = `${COLLECTIONS.COURSES}/${id}`;
     try {
       // 1. Get the course to cleanup attachments
@@ -155,6 +161,7 @@ class StorageService {
 
   // QCMS
   async getQCMS(courseId: string): Promise<QCM[]> {
+    if (!db) return [];
     const path = COLLECTIONS.QCMS;
     try {
       let q;
@@ -175,7 +182,7 @@ class StorageService {
   }
 
   async deleteQCM(id: string): Promise<void> {
-    if (!id) return;
+    if (!id || !db) return;
     const path = `${COLLECTIONS.QCMS}/${id}`;
     try {
       const qcm = await this.getDocById<QCM>(COLLECTIONS.QCMS, id);
@@ -203,6 +210,7 @@ class StorageService {
   }
 
   async addQCM(qcm: Omit<QCM, 'id' | 'createdAt'>): Promise<QCM> {
+    if (!db) throw new Error("Database not initialized");
     const path = COLLECTIONS.QCMS;
     try {
       const newQcmData = {
@@ -227,6 +235,7 @@ class StorageService {
   }
 
   async addQCMS(qcmsList: Omit<QCM, 'id' | 'createdAt'>[]): Promise<void> {
+    if (!db) throw new Error("Database not initialized");
     const path = COLLECTIONS.QCMS;
     try {
       const batchSize = 100; // Firestore limit is 500, but let's be safe
@@ -262,6 +271,7 @@ class StorageService {
 
   // Ratings
   async getRatings(userId: string, courseId: string): Promise<UserRating[]> {
+    if (!db) return [];
     const path = COLLECTIONS.RATINGS;
     try {
       let q;
@@ -295,6 +305,7 @@ class StorageService {
   }
 
   async removeRating(userId: string, qcmId: string): Promise<void> {
+    if (!db) return;
     const path = COLLECTIONS.RATINGS;
     try {
       const q = query(collection(db, path), where('userId', '==', userId), where('qcmId', '==', qcmId));
@@ -308,6 +319,7 @@ class StorageService {
   }
 
   async saveRating(rating: Omit<UserRating, 'id' | 'lastUpdated'>): Promise<UserRating> {
+    if (!db) throw new Error("Database not initialized");
     const path = COLLECTIONS.RATINGS;
     try {
       const q = query(collection(db, path), where('userId', '==', rating.userId), where('qcmId', '==', rating.qcmId));
@@ -333,6 +345,7 @@ class StorageService {
   }
 
   async deleteAttachment(courseId: string, attachmentIndex: number): Promise<Course> {
+    if (!db) throw new Error("Database not initialized");
     const path = `${COLLECTIONS.COURSES}/${courseId}`;
     try {
       const course = await this.getCourse(courseId);
@@ -355,7 +368,7 @@ class StorageService {
   }
 
   async clearCourseQCMS(courseId: string): Promise<void> {
-    if (!courseId) return;
+    if (!courseId || !db) return;
     const path = `${COLLECTIONS.QCMS} for course ${courseId}`;
     try {
       // client-side batch delete
@@ -382,6 +395,7 @@ class StorageService {
   }
 
   private async getDocById<T>(colName: string, id: string): Promise<T | null> {
+    if (!db) return null;
     const docSnap = await getDoc(doc(db, colName, id));
     if (docSnap.exists()) return { ...docSnap.data(), id: docSnap.id } as T;
     return null;
