@@ -32,17 +32,31 @@ export default function App() {
   const [adhocQcms, setAdhocQcms] = useState<QCM[] | null>(null);
   const [importCourseId, setImportCourseId] = useState<string | null>(null);
 
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [configured, setConfigured] = useState(false);
+
   useEffect(() => {
-    if (!isFirebaseConfigured || !auth) {
-      setLoading(false);
-      return;
-    }
-    const unsubscribe = auth.onAuthStateChanged((u: any) => {
-      setUser(u);
-      setIsAdmin(checkIsAdmin(u));
+    import('@/src/lib/firebase').then((mod) => {
+      mod.firebaseInitPromise.then((isConfigured: boolean) => {
+        setConfigured(isConfigured);
+        setIsInitializing(false);
+        
+        if (isConfigured && mod.auth) {
+          const unsubscribe = mod.auth.onAuthStateChanged((u: any) => {
+            setUser(u);
+            setIsAdmin(mod.checkIsAdmin(u));
+            setLoading(false);
+          });
+          return unsubscribe;
+        } else {
+          setLoading(false);
+        }
+      });
+    }).catch(err => {
+      console.error("Critical boot error:", err);
+      setIsInitializing(false);
       setLoading(false);
     });
-    return () => unsubscribe();
   }, []);
 
   const handleSignIn = async () => {
@@ -75,7 +89,18 @@ export default function App() {
     }
   };
 
-  if (!isFirebaseConfigured) {
+  if (isInitializing) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0A0A0A]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Synchronisation Firebase...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!configured) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0A0A0A] p-6 font-sans text-white">
         <motion.div 
@@ -105,10 +130,10 @@ export default function App() {
                 </section>
 
                 <section>
-                  <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold text-amber-500 mb-4 px-1">2. Créer une App Web</h2>
+                  <h2 className="text-[11px] uppercase tracking-[0.2em] font-bold text-amber-500 mb-4 px-1">2. Paramètres du Projet</h2>
                   <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 space-y-3">
                     <p className="text-xs text-white/50 leading-relaxed">
-                      Dans votre projet, cliquez sur l'icône <b>Code (&lt;/&gt;)</b> pour ajouter une application Web. Donnez lui un nom et cliquez sur "Enregistrer".
+                      Allez dans "Paramètres du projet" &gt; "Général", descendez jusqu'à "Vos applications" et créez une App Web (icône &lt;/&gt;).
                     </p>
                   </div>
                 </section>
@@ -150,13 +175,12 @@ export default function App() {
       </div>
     );
   }
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+      <div className="flex items-center justify-center min-h-screen bg-[#0A0A0A]">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-600 font-medium">Chargement de MedStratify...</p>
+          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Initialisation de la session...</p>
         </div>
       </div>
     );

@@ -2,30 +2,44 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import firebaseConfig from '@/firebase-applet-config.json';
 
-// Log a warning if config seems invalid (empty apiKey is a common sign of missing config)
-if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "REPLACE_WITH_YOUR_API_KEY") {
-  console.warn("⚠️ Firebase Configuration is incomplete. Please check your firebase-applet-config.json file.");
-}
+let app: any = null;
+let firebaseConfig: any = null;
 
-let app;
-try {
-  if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY") {
-    app = initializeApp(firebaseConfig);
-  } else {
-    console.warn("⚠️ Firebase configuration is missing or incomplete.");
+// Initialization promise
+export const firebaseInitPromise = (async () => {
+  try {
+    firebaseConfig = await import('../../firebase-applet-config.json').then(m => m.default);
+    if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY") {
+      app = initializeApp(firebaseConfig);
+      return true;
+    }
+  } catch (e) {
+    console.error("Firebase init failed:", e);
   }
-} catch (error) {
-  console.error("❌ Failed to initialize Firebase:", error);
-}
+  return false;
+})();
 
-export const isFirebaseConfigured = !!app;
-export const auth = app ? getAuth(app) : null;
+export const getFirebaseApp = () => app;
+export const getIsConfigured = () => !!app;
+export const getAuthInstance = () => app ? getAuth(app) : null;
+export const getDb = () => app ? getFirestore(app, firebaseConfig?.firestoreDatabaseId || "(default)") : null;
+export const getStorageInstance = () => app ? getStorage(app) : null;
 
-// Ensure db and storage don't crash if app exists but config is weird
-export const db = app ? getFirestore(app, firebaseConfig?.firestoreDatabaseId || "(default)") : null;
-export const storage = app ? getStorage(app) : null;
+// Keep exports for backward compatibility but they might be null initially
+export let isFirebaseConfigured = false;
+export let auth: any = null;
+export let db: any = null;
+export let storage: any = null;
+
+firebaseInitPromise.then(configured => {
+  isFirebaseConfigured = configured;
+  if (configured) {
+    auth = getAuth(app);
+    db = getFirestore(app, firebaseConfig?.firestoreDatabaseId || "(default)");
+    storage = getStorage(app);
+  }
+});
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -85,12 +99,12 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+      userId: auth?.currentUser?.uid || null,
+      email: auth?.currentUser?.email || null,
+      emailVerified: auth?.currentUser?.emailVerified || null,
+      isAnonymous: auth?.currentUser?.isAnonymous || null,
+      tenantId: auth?.currentUser?.tenantId || null,
+      providerInfo: auth?.currentUser?.providerData?.map(provider => ({
         providerId: provider.providerId,
         email: provider.email,
       })) || []
